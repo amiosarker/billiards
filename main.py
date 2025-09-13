@@ -16,26 +16,18 @@ images = [image1]
 clock = pg.time.Clock() 
 
 # Draw circle function
-ballradius = 20
-ballpos = [[100,100], [200,100], [300,100], [400,100], [500,100], [600,100]]
-def circle(image, pos, radius):
-    px, py = int(pos[0]), int(pos[1])
-    for y in range(-radius, radius):
-        for x in range(-radius, radius):
-            if x*x + y*y <= radius*radius:
-                ix = x + radius
-                iy = y + radius
-                if 0 <= ix < image.get_width() and 0 <= iy < image.get_height():
-                    color = image.get_at((ix, iy))
-                    sx = px + x
-                    sy = py + y
-                    if 0 <= sx < width and 0 <= sy < height:
-                        screen.set_at((sx, sy), color)
 
-#physics variables
-ballvel = [0,0,0,0,0,0]
-balldirection = [0,0,0,0,0,0]
-balllist = []
+def circle(color, pos, radius):
+    for i in range(radius*radius*4):
+        diameter = radius * 2
+        x = i % diameter
+        y = i // diameter
+        color2 = color.get_at((x, y))
+        if (x-radius)**2 + (y-radius)**2 <= radius**2:
+            screen.set_at((int(x+pos[0]), int(y+pos[1])), color2)
+
+
+
 
 class Ball:
     def __init__(self, pos, vel, direction, radius, color):
@@ -69,7 +61,7 @@ class Ball:
                     list[i].direction = angle
                     self.vel = total_vel * 0.5
                     list[i].vel = total_vel * 0.5
-
+balllist = []
 testball = Ball([400,300], 100, math.pi/4, 20, images[0])
 balllist.append(testball)
 ball2 = Ball([500,300], 0, 0, 20, images[0])
