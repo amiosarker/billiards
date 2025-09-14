@@ -6,21 +6,22 @@ import math
 import PIL.Image as Image
 pg.init()
 
-frame = 0
 framerate = 120
 
-# 1. Set up display FIRST
-width, height = 600,1200
+# 1. Set up 
+width, height = 400,800
 screen = pg.display.set_mode((width, height))
+radius = 20
 
 # 2. THEN load and convert your image
 image1 = pg.image.load("sprites/1_ball.png").convert_alpha()
-image1 = pg.transform.scale(image1, (80, 80))  # Resize image to 80x80 pixels
-images = [image1]
+image2 = pg.image.load("sprites/2_ball.png").convert_alpha()
+images = [image1, image2]
+for i in range(len(images)):
+    images[i] = pg.transform.scale(images[i], (2*radius, 2*radius))
 clock = pg.time.Clock() 
 
 # Draw circle function
-
 def circle(color, pos, radius):
     for i in range(radius*radius*4):
         diameter = radius * 2
@@ -42,10 +43,10 @@ class Ball:
         self.direction = direction  
         self.radius = radius
         self.color = color
-        self.initially_pos = pos
+        self.initially_pos = pos.copy()
     
     def move(self):
-        self.initially_pos = self.pos
+        self.initially_pos = self.pos.copy()  # Make a copy, not a reference
         self.pos[0] += self.vel * math.cos(self.direction)
         self.pos[1] += self.vel * math.sin(self.direction)
         if self.pos[0] <= self.radius or self.pos[0] >= width - self.radius:
@@ -72,26 +73,30 @@ class Ball:
                     list[i].direction = angle
                     self.vel = total_vel * 0.5
                     list[i].vel = total_vel * 0.5
+    def distancecheck(self,position):
+        dist = math.sqrt((self.pos[0] - position[0])**2 + (self.pos[1] - position[1])**2)
+        return dist
 
-ball1 = Ball([400,300], 100, math.pi/4, 40, images[0])
-
-ball2 = Ball([500,300], 0, 0, 40, images[0])
+#ballz
+ball1 = Ball([300,300], 100, math.pi/4, radius, images[0])
+ball2 = Ball([250,300], 0, 0, radius, images[1])
 
 balllist = [ball1, ball2]
 
+#screen
+screen.fill((0,0,0))
+
 # Main loop
 while True:
-    
-    screen.fill((0,0,0))
     #for i in range(len(ballpos)):
         #circle(colors[i], (ballpos[i]), ballradius)
-    mousex, mousey = pg.mouse.get_pos()
-    
+    mouse = pg.mouse.get_pos()
+
     for ball in balllist:
         ball.collide(balllist)
         ball.move()
-        
-        
+        #print (ball.pos[0]-ball.initially_pos[0])
+        circle([0,0,0], ball.initially_pos, ball.radius)
         circle(ball.color, ball.pos, ball.radius)
     pg.display.flip()
     for event in pg.event.get():
