@@ -17,7 +17,6 @@ gameover = False
 totalvel = False
 lose = False
 win = False
-pocketed = False
 
 # 1. Set up 
 width, height = 464,864
@@ -46,6 +45,8 @@ for i in range(len(filelist)):
     filelist[i] = img
 
 temp_surface = pg.Surface(screen.get_size(), pg.SRCALPHA)
+
+filelist[19]=pg.transform.scale(filelist[19],(int(filelist[19].get_width()/3),int(filelist[19].get_height()/3)))
 
 def mapvalues(value, leftMin, leftMax, rightMin, rightMax):
     # Figure out how 'wide' each range is
@@ -167,8 +168,50 @@ class Ball:
                 break
 
 class hole:
-    def __init__(self, pos):
+    def __init__(self, pos,hradius,tolerence):
         self.pos = pos
+        self.pocketed = False
+        self.radius = hradius
+        self.tolerence = tolerence
+        self.clock = 0
+    def pocket(self,cueball, eightball,ball):
+        global gameover, lose, time_frame, win, balllist
+        if ball.distancecheck([self.pos[0]+self.radius, self.pos[1]+self.radius]) < self.radius * self.tolerence:
+
+            if ball != eightball:
+                balllist.remove(ball)
+                if ball != cueball:
+                    self.pocketed = True
+                print("pocketed")
+            else:  # ball == eightball
+            # count how many object balls are still left
+                object_balls_left = [b for b in self.balllist if b not in (cueball, eightball)]
+
+                if len(object_balls_left) > 0:
+                    print("you lose")
+                    gameover = True
+                    lose = False
+                    time_frame = 0   # reset fade counter
+                else:
+                    balllist.remove(ball)
+                    print("you win")
+                    gameover = False
+                    win = True
+                    setuop()
+    def imagefadein (self,drawnimage):
+        mainbool = False
+        global screen
+        if self.pocketed:
+            
+            if self.clock < 255:
+                self.clock +=15
+                mainbool = True
+            if self.clock >= 255:
+                self.clock = 0
+                self.pocketed = False
+            drawnimage.set_alpha(min(self.clock, 255))
+            screen.blit(drawnimage, (self.pos[0]-int(drawnimage.get_width()/2),self.pos[1]-int(drawnimage.get_height()/2)))
+            
 
 balllist = []
 
@@ -193,6 +236,7 @@ bottom_l = [45-radius,817-radius]
 bottom_r = [419-radius,817-radius]
 middle_l = [45-radius,432-radius]
 middle_r = [419-radius,432-radius]
+
 #ballz
 
 ball1 = Ball(rack_positions[0], 0, 0, radius, filelist[1],balllist)
@@ -214,6 +258,15 @@ ball15 = Ball(rack_positions[14], 0, 0, radius, filelist[15],balllist)
 cue_ball = Ball(cue_ball_pos, 0, 0, radius, filelist[0],balllist)
 
 balllist = [ ball1,ball2, ball3, ball4, ball5, ball6, ball7, ball9, ball10, ball11, ball12, ball13, ball14, ball15,ball8, cue_ball]
+
+topl = hole([45-radius,47-radius],hole_radius,1.5)
+topr = hole([419-radius,47-radius],hole_radius,1.5)
+bottoml = hole([45-radius,817-radius],hole_radius,1.5)
+bottomr = hole([419-radius,817-radius],hole_radius,1.5)
+middlel = hole([45-radius,432-radius],hole_radius,1.5)
+middler = hole([419-radius,432-radius],hole_radius,1.5)
+holes = [topl,topr,bottoml,bottomr,middlel,middler]
+
 def setuop():
     global balllist  # we will update the global list in-place / make sure it's the current one
 
@@ -385,22 +438,13 @@ while True:
             #print (ball.pos[0]-ball.initially_pos[0])
             #circle([0,0,255], [ball.initially_pos[0]-ball.radius,ball.initially_pos[1]-ball.radius], ball.radius)
             circle(ball.color, [ball.pos[0]-ball.radius,ball.pos[1]-ball.radius], ball.radius)
-            if ball.distancecheck([top_l[0]+hole_radius, top_l[1]+hole_radius]) < hole_radius*1.5:
-                #circle([0,0,255], [ball.pos[0]-ball.radius,ball.pos[1]-ball.radius], ball.radius)
-                ball_pocket_behavior(top_l, ball, balllist, cue_ball, ball8)
-                
-            if ball.distancecheck([top_r[0]+hole_radius, top_r[1]+hole_radius]) < hole_radius*1.5:
-                #circle([0,0,255], [ball.pos[0]-ball.radius,ball.pos[1]-ball.radius], ball.radius)
-                ball_pocket_behavior(top_r, ball, balllist, cue_ball, ball8)
-            if ball.distancecheck([bottom_l[0]+hole_radius, bottom_l[1]+  hole_radius]) < hole_radius*1.5:
-                ball_pocket_behavior(bottom_l, ball, balllist, cue_ball, ball8)
-                
-            if ball.distancecheck([bottom_r[0]+hole_radius, bottom_r[1]+ hole_radius]) < hole_radius*1.5:
-                ball_pocket_behavior(bottom_r, ball, balllist, cue_ball, ball8)
-            if ball.distancecheck([middle_l[0]+hole_radius, middle_l[1]+ hole_radius]) < hole_radius*1.5:
-                ball_pocket_behavior(middle_l, ball, balllist, cue_ball, ball8)
-            if ball.distancecheck([middle_r[0]+hole_radius, middle_r[1]+ hole_radius]) < hole_radius*1.5:
-                ball_pocket_behavior(middle_r, ball, balllist, cue_ball, ball8)
+            topl.pocket(cue_ball,ball8,ball)  
+            topr.pocket(cue_ball,ball8,ball) 
+            bottoml.pocket(cue_ball,ball8,ball) 
+            bottomr.pocket(cue_ball,ball8,ball) 
+            middlel.pocket(cue_ball,ball8,ball) 
+            middler.pocket(cue_ball,ball8,ball)  
+            
             if ball.vel > 0:
                 totalvel = True
             else:
@@ -435,7 +479,8 @@ while True:
         
         setuop()
         print("you win")
-
+    for i in range(len(holes)):
+        holes[i].imagefadein(filelist[19])
     # reset
     pg.display.flip()
     for event in pg.event.get():
