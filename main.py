@@ -17,6 +17,7 @@ gameover = False
 totalvel = False
 lose = False
 win = False
+pocketed = False
 
 # 1. Set up 
 width, height = 464,864
@@ -43,6 +44,7 @@ for i in range(len(filelist)):
     if "ball" in filename:
         img = pg.transform.scale(img, (2*radius, 2*radius))
     filelist[i] = img
+
 temp_surface = pg.Surface(screen.get_size(), pg.SRCALPHA)
 
 def mapvalues(value, leftMin, leftMax, rightMin, rightMax):
@@ -164,6 +166,9 @@ class Ball:
                 self.bool = True
                 break
 
+class hole:
+    def __init__(self, pos):
+        self.pos = pos
 
 balllist = []
 
@@ -179,6 +184,7 @@ rack_positions = [
     # Row 5
     [132, 200], [182, 200], [232, 200], [282, 200], [332, 200],[232, 372], [232, 286]
 ]
+
 initial_rack_positions = rack_positions.copy()
 cue_ball_pos = [232, 664]
 top_l = [45-radius,47-radius]
@@ -188,6 +194,7 @@ bottom_r = [419-radius,817-radius]
 middle_l = [45-radius,432-radius]
 middle_r = [419-radius,432-radius]
 #ballz
+
 ball1 = Ball(rack_positions[0], 0, 0, radius, filelist[1],balllist)
 ball2 = Ball(rack_positions[1], 0, 0, radius, filelist[2],balllist)
 ball3 = Ball(rack_positions[2], 0, 0, radius, filelist[3],balllist)
@@ -204,10 +211,7 @@ ball13 = Ball(rack_positions[11], 0, 0, radius, filelist[13],balllist)
 ball14 = Ball(rack_positions[13], 0, 0, radius, filelist[14],balllist)
 ball15 = Ball(rack_positions[14], 0, 0, radius, filelist[15],balllist)  
 
-
-
 cue_ball = Ball(cue_ball_pos, 0, 0, radius, filelist[0],balllist)
-
 
 balllist = [ ball1,ball2, ball3, ball4, ball5, ball6, ball7, ball9, ball10, ball11, ball12, ball13, ball14, ball15,ball8, cue_ball]
 def setuop():
@@ -271,12 +275,15 @@ def setuop():
 background = filelist[16]
 screen.fill((0,0,255))
 screen.blit(background, (0,0))
-
+pocket_time = 0
 def ball_pocket_behavior(hole, ball, balls, cueball, eightball):
     global gameover, time_frame,win,lose
+    
     if ball != eightball:
         balls.remove(ball)
+        pocketed = True
         print("pocketed")
+
         
     else:  # ball == eightball
         # count how many object balls are still left
