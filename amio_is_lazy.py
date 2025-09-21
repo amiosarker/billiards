@@ -17,5 +17,6 @@ for file in os.listdir():
         os.rename(file, file.replace(file[0], "0"+file[0]))
     if is_number(file[0]+file[1]) and file[2]!="_":
         os.rename(file, file.replace(file[0]+file[1],file[0]+file[1]+"_"))
-    
+    if " " in file:
+        os.replace(file, file.replace(" ","_"))
 

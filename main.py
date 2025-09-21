@@ -19,12 +19,14 @@ lose = False
 win = False
 
 # 1. Set up 
+screeninfo = pg.display.Info()
+screenwidth, screenheight = screeninfo.current_w, screeninfo.current_h
 width, height = 464,864
 edgecoliderx, edgecolidery = 400,800
-screen = pg.display.set_mode((width, height))
+screen = pg.display.set_mode((screenwidth, screenheight), pg.RESIZABLE)
 radius = 20
 hole_radius = 20
-
+playareaoffset = [int(screenwidth/2 - width/2), int(screenheight/2 - height/2)]
 filelist = []
 
 for file in os.listdir():
@@ -168,12 +170,13 @@ class Ball:
                 break
 
 class hole:
-    def __init__(self, pos,hradius,tolerence):
+    def __init__(self, pos,hradius,tolerence,offset):
         self.pos = pos
         self.pocketed = False
         self.radius = hradius
         self.tolerence = tolerence
         self.clock = 0
+        self.offset = offset
     def pocket(self,cueball, eightball,ball):
         global gameover, lose, time_frame, win, balllist
         if ball.distancecheck([self.pos[0]+self.radius, self.pos[1]+self.radius]) < self.radius * self.tolerence:
@@ -185,7 +188,7 @@ class hole:
                 print("pocketed")
             else:  # ball == eightball
             # count how many object balls are still left
-                object_balls_left = [b for b in self.balllist if b not in (cueball, eightball)]
+                object_balls_left = [b for b in balllist if b not in (cueball, eightball)]
 
                 if len(object_balls_left) > 0:
                     print("you lose")
@@ -197,10 +200,11 @@ class hole:
                     print("you win")
                     gameover = False
                     win = True
+
                     setuop()
     def imagefadein (self,drawnimage):
         mainbool = False
-        global screen
+        global screen,playareaoffset
         if self.pocketed:
             
             if self.clock < 255:
@@ -210,7 +214,8 @@ class hole:
                 self.clock = 0
                 self.pocketed = False
             drawnimage.set_alpha(min(self.clock, 255))
-            screen.blit(drawnimage, (self.pos[0]-int(drawnimage.get_width()/2),self.pos[1]-int(drawnimage.get_height()/2)))
+            screen.blit(drawnimage, (self.pos[0]-int(drawnimage.get_width()/2)+25+playareaoffset[0],self.pos[1]-int(drawnimage.get_height()/2)+15+playareaoffset[1]))
+            #screen.blit(drawnimage, (self.pos[0]+self.offset[0],self.pos[1]+self.offset[1]))
             
 
 balllist = []
@@ -230,13 +235,14 @@ rack_positions = [
 
 initial_rack_positions = rack_positions.copy()
 cue_ball_pos = [232, 664]
-top_l = [45-radius,47-radius]
-top_r = [419-radius,47-radius]
-bottom_l = [45-radius,817-radius]
-bottom_r = [419-radius,817-radius]
-middle_l = [45-radius,432-radius]
-middle_r = [419-radius,432-radius]
 
+topl = hole([45-radius,47-radius],hole_radius,1.5,[25,15])
+topr = hole([419-radius,47-radius],hole_radius,1.5,[0,0])
+bottoml = hole([45-radius,817-radius],hole_radius,1.5,[50,-50])
+bottomr = hole([419-radius,817-radius],hole_radius,1.5,[25,15])
+middlel = hole([45-radius,432-radius],hole_radius,1.5,[25,15])
+middler = hole([419-radius,432-radius],hole_radius,1.5,[-50,0])
+holes = [topl,topr,bottoml,bottomr,middlel,middler,]
 #ballz
 
 ball1 = Ball(rack_positions[0], 0, 0, radius, filelist[1],balllist)
@@ -259,13 +265,7 @@ cue_ball = Ball(cue_ball_pos, 0, 0, radius, filelist[0],balllist)
 
 balllist = [ ball1,ball2, ball3, ball4, ball5, ball6, ball7, ball9, ball10, ball11, ball12, ball13, ball14, ball15,ball8, cue_ball]
 
-topl = hole([45-radius,47-radius],hole_radius,1.5)
-topr = hole([419-radius,47-radius],hole_radius,1.5)
-bottoml = hole([45-radius,817-radius],hole_radius,1.5)
-bottomr = hole([419-radius,817-radius],hole_radius,1.5)
-middlel = hole([45-radius,432-radius],hole_radius,1.5)
-middler = hole([419-radius,432-radius],hole_radius,1.5)
-holes = [topl,topr,bottoml,bottomr,middlel,middler]
+
 
 def setuop():
     global balllist  # we will update the global list in-place / make sure it's the current one
@@ -329,31 +329,6 @@ background = filelist[16]
 screen.fill((0,0,255))
 screen.blit(background, (0,0))
 pocket_time = 0
-def ball_pocket_behavior(hole, ball, balls, cueball, eightball):
-    global gameover, time_frame,win,lose
-    
-    if ball != eightball:
-        balls.remove(ball)
-        pocketed = True
-        print("pocketed")
-
-        
-    else:  # ball == eightball
-        # count how many object balls are still left
-        object_balls_left = [b for b in balls if b not in (cueball, eightball)]
-
-        if len(object_balls_left) > 0:
-            print("you lose")
-            gameover = True
-            lose = False
-            time_frame = 0   # reset fade counter
-        else:
-            balls.remove(ball)
-            print("you win")
-            gameover = False
-            win = True
-            setuop()
-
 
 cue_ball.vel = 0
 
@@ -361,31 +336,32 @@ mouse_on_cueball = False
 active_image =18
 setuop()
 # Main loop
+
 while True:
-    mouse = pg.mouse.get_pos()
+    playareaoffset = [int(screenwidth/2 - width/2), int(screenheight/2 - height/2)]
+    normalmouse = pg.mouse.get_pos()
+    mouse = (normalmouse[0]-playareaoffset[0],normalmouse[1]-playareaoffset[1])
+
+    mouse_buttons = pg.mouse.get_pressed()
     if gameover:
         # Fade in the "you lose" image
         if time_frame < 255:
             time_frame += 5
-
-        filelist[18].set_alpha(time_frame)
         if win :
-            setuop
             active_image = 17
         if lose:
             active_image = 18
+        filelist[active_image].set_alpha(time_frame)
+        
         for i in range(len(balllist)):
-            circle(balllist[i].color, [balllist[i].pos[0]-balllist[i].radius, balllist[i].pos[1]-balllist[i].radius], balllist[i].radius)
-        screen.blit(filelist[active_image], (width/2 - 150, height/2 - 150))
+            circle(balllist[i].color, [balllist[i].pos[0]-balllist[i].radius+playareaoffset[0], balllist[i].pos[1]-balllist[i].radius+playareaoffset[1]], balllist[i].radius)
+        screen.blit(filelist[active_image], (width/2 - 150+playareaoffset[0], height/2 - 150+playareaoffset[1]))
 
         if time_frame >= 255:
             # Wait a bit, then reset
             pg.time.delay(1000)  # 1 second pause
             setuop()
             gameover = False
-
-    mouse_buttons = pg.mouse.get_pressed()
-    
     if cue_ball.distancecheck(mouse) < 2*radius:
         mouse_on_cueball = True
     if not gameover:
@@ -401,8 +377,8 @@ while True:
 
                 temp_surface.fill((0, 0, 0, 0))  # <-- Clear the temp_surface here
 
-                pg.draw.line(screen, (255,255,255), (cue_ball.pos[0], cue_ball.pos[1]), (mouse[0], mouse[1]), int(mapvalues(power,0,100,5,14)))
-                pg.draw.line(screen, (min(color,255),0,0), (cue_ball.pos[0], cue_ball.pos[1]), (mouse[0], mouse[1]), int(mapvalues(power,0,100,4,10)))
+                pg.draw.line(screen, (255,255,255), (cue_ball.pos[0]+playareaoffset[0], cue_ball.pos[1]+playareaoffset[1]), (mouse[0]+playareaoffset[0], mouse[1]+playareaoffset[1]), int(mapvalues(power,0,100,5,14)))
+                pg.draw.line(screen, (min(color,255),0,0), (cue_ball.pos[0]+playareaoffset[0], cue_ball.pos[1]+playareaoffset[1]), (mouse[0]+playareaoffset[0], mouse[1]+playareaoffset[1]), int(mapvalues(power,0,100,4,10)))
                 line_length = ((power - frame)*1.5)+frame
                 
                 end_x = cue_ball.pos[0] + line_length * math.cos(cue_ball.direction)
@@ -411,8 +387,8 @@ while True:
                 pg.draw.line(
                     temp_surface, 
                     (255, 255, 255, 128), 
-                    (cue_ball.pos[0], cue_ball.pos[1]), 
-                    (end_x, end_y), 
+                    (cue_ball.pos[0]+playareaoffset[0], cue_ball.pos[1]+playareaoffset[1]), 
+                    (end_x+playareaoffset[0], end_y+playareaoffset[1]), 
                     5
                 )
                 power = min(power, 100)
@@ -437,7 +413,7 @@ while True:
             ball.weirdcollison(balllist)
             #print (ball.pos[0]-ball.initially_pos[0])
             #circle([0,0,255], [ball.initially_pos[0]-ball.radius,ball.initially_pos[1]-ball.radius], ball.radius)
-            circle(ball.color, [ball.pos[0]-ball.radius,ball.pos[1]-ball.radius], ball.radius)
+            circle(ball.color, [ball.pos[0]-ball.radius+playareaoffset[0],ball.pos[1]-ball.radius+playareaoffset[1]], ball.radius)
             topl.pocket(cue_ball,ball8,ball)  
             topr.pocket(cue_ball,ball8,ball) 
             bottoml.pocket(cue_ball,ball8,ball) 
@@ -459,9 +435,9 @@ while True:
 
     # only reset when all balls have stopped AND cueball is missing
         if cueball_pocketed and not totalvel:
-            screen.blit(background, (0,0))
+            screen.blit(background, playareaoffset)
             for i in range(len(balllist)):
-                circle(balllist[i].color, [balllist[i].pos[0]-balllist[i].radius,balllist[i].pos[1]-balllist[i].radius], balllist[i].radius)
+                circle(balllist[i].color, [balllist[i].pos[0]-balllist[i].radius+playareaoffset[0],balllist[i].pos[1]-balllist[i].radius+playareaoffset[1]], balllist[i].radius)
             # short pause so the pocket feels real
             balllist.append(cue_ball)
             cue_ball.pos = cue_ball_pos.copy()
@@ -472,11 +448,11 @@ while True:
         
 
     if balllist == [cue_ball]:
-        screen.blit(background, (0,0))
-        screen.blit(filelist[17],(0,0))
-        screen.blit(filelist[17],(width/2-150,height/2-150))
+        screen.blit(background, playareaoffset)
+        screen.blit(filelist[17],playareaoffset)
+        screen.blit(filelist[17],(width/2-150+playareaoffset,height/2-150+playareaoffset))
         pg.time.delay(500)
-        
+        win = True
         setuop()
         print("you win")
     for i in range(len(holes)):
@@ -486,7 +462,18 @@ while True:
     for event in pg.event.get():
         if event.type == pg.QUIT:
             sys.exit()
+            running = False
+        elif event.type == pg.KEYDOWN:
+            if event.key == pg.K_ESCAPE:  # press ESC to exit fullscreen
+                running = False
+        elif event.type == pg.VIDEORESIZE:
+            screen = pg.display.set_mode((event.w, event.h), pg.RESIZABLE)
+            screenwidth,screenheight = event.w,event.h
     #print("hello world")
-    screen.blit(background, (0,0))
+   
+    
+    screen.fill((0,0,0))
+    screen.blit(background, playareaoffset)
+    
     clock.tick(framerate)
     
