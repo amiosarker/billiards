@@ -7,7 +7,7 @@ import PIL.Image as Image
 import os, re
 pg.init()
 os.chdir("/Users/amiosarker/dev/Programing/python/billiards/indexed_sprites")
-win = False
+score = 0
 framerate = 120
 frame = 0
 time_frame = 0
@@ -28,7 +28,7 @@ radius = 20
 hole_radius = 20
 playareaoffset = [int(screenwidth/2 - width/2), int(screenheight/2 - height/2)]
 filelist = []
-
+balllist =[]
 for file in os.listdir():
     if file.endswith(".png"):
         filelist.append(file)
@@ -47,9 +47,12 @@ for i in range(len(filelist)):
     filelist[i] = img
 
 temp_surface = pg.Surface(screen.get_size(), pg.SRCALPHA)
-
+background = filelist[16]
+pocket_time = 0
+mouse_on_cueball = False
+active_image =18
 filelist[19]=pg.transform.scale(filelist[19],(int(filelist[19].get_width()/3),int(filelist[19].get_height()/3)))
-
+clock = pg.time.Clock() 
 def mapvalues(value, leftMin, leftMax, rightMin, rightMax):
     # Figure out how 'wide' each range is
     leftSpan = leftMax - leftMin
@@ -60,8 +63,6 @@ def mapvalues(value, leftMin, leftMax, rightMin, rightMax):
 
     # Convert the 0-1 range into a value in the right range.
     return rightMin + (valueScaled * rightSpan)
-
-clock = pg.time.Clock() 
 
 # Draw circle function
 def circle(color, pos, radius):
@@ -181,27 +182,26 @@ class hole:
         global gameover, lose, time_frame, win, balllist
         if ball.distancecheck([self.pos[0]+self.radius, self.pos[1]+self.radius]) < self.radius * self.tolerence:
 
-            if ball != eightball:
-                balllist.remove(ball)
-                if ball != cueball:
-                    self.pocketed = True
-                print("pocketed")
-            else:  # ball == eightball
-            # count how many object balls are still left
+            if ball == eightball:
                 object_balls_left = [b for b in balllist if b not in (cueball, eightball)]
-
                 if len(object_balls_left) > 0:
                     print("you lose")
                     gameover = True
-                    lose = False
-                    time_frame = 0   # reset fade counter
+                    lose = True
+                    win = False
+                    time_frame = 0
                 else:
-                    balllist.remove(ball)
                     print("you win")
-                    gameover = False
+                    balllist.remove(ball)
+                    gameover = True
                     win = True
-
-                    setuop()
+                    lose = False
+                    time_frame = 0
+            else:
+                # just a normal object ball
+                balllist.remove(ball)
+                if ball != cue_ball:
+                    self.pocketed = True
     def imagefadein (self,drawnimage):
         mainbool = False
         global screen,playareaoffset
@@ -214,11 +214,7 @@ class hole:
                 self.clock = 0
                 self.pocketed = False
             drawnimage.set_alpha(min(self.clock, 255))
-            screen.blit(drawnimage, (self.pos[0]-int(drawnimage.get_width()/2)+25+playareaoffset[0],self.pos[1]-int(drawnimage.get_height()/2)+15+playareaoffset[1]))
-            #screen.blit(drawnimage, (self.pos[0]+self.offset[0],self.pos[1]+self.offset[1]))
-            
-
-balllist = []
+            screen.blit(drawnimage, (self.pos[0]-int(drawnimage.get_width()/2)+25+playareaoffset[0],self.pos[1]-int(drawnimage.get_height()/2)+15+playareaoffset[1]))           
 
 rack_positions = [
     # Row 1
@@ -264,8 +260,6 @@ ball15 = Ball(rack_positions[14], 0, 0, radius, filelist[15],balllist)
 cue_ball = Ball(cue_ball_pos, 0, 0, radius, filelist[0],balllist)
 
 balllist = [ ball1,ball2, ball3, ball4, ball5, ball6, ball7, ball9, ball10, ball11, ball12, ball13, ball14, ball15,ball8, cue_ball]
-
-
 
 def setuop():
     global balllist  # we will update the global list in-place / make sure it's the current one
@@ -324,19 +318,10 @@ def setuop():
         cue_ball
     ]
     # no return — we've updated the global balllist
-#screen
-background = filelist[16]
-screen.fill((0,0,255))
-screen.blit(background, (0,0))
-pocket_time = 0
 
-cue_ball.vel = 0
-
-mouse_on_cueball = False
-active_image =18
 setuop()
 # Main loop
-
+screen.fill((0,0,0))
 while True:
     playareaoffset = [int(screenwidth/2 - width/2), int(screenheight/2 - height/2)]
     normalmouse = pg.mouse.get_pos()
@@ -395,6 +380,7 @@ while True:
                 mouse_on_cueball = True
                 screen.blit(temp_surface, (0, 0))
             else:
+                cue_ball.vel = 0
                 cue_ball.vel = power 
                 mouse_on_cueball = False
                 if power != 0:
@@ -450,7 +436,7 @@ while True:
     if balllist == [cue_ball]:
         screen.blit(background, playareaoffset)
         screen.blit(filelist[17],playareaoffset)
-        screen.blit(filelist[17],(width/2-150+playareaoffset,height/2-150+playareaoffset))
+        screen.blit(filelist[17],(width/2-150+playareaoffset[0],height/2-150+playareaoffset[1]))
         pg.time.delay(500)
         win = True
         setuop()
@@ -471,9 +457,7 @@ while True:
             screenwidth,screenheight = event.w,event.h
     #print("hello world")
    
-    
-    screen.fill((0,0,0))
+    screen.blit(filelist[20],(0,0))
     screen.blit(background, playareaoffset)
     
     clock.tick(framerate)
-    
