@@ -3,10 +3,13 @@ import pygame as pg
 import sys
 import random
 import math
-import PIL.Image as Image
 import os, re
+import json
+
 pg.init()
-os.chdir("/Users/amiosarker/dev/Programing/python/billiards/indexed_sprites")
+originaldir = os.getcwd()
+#print(originaldir)
+os.chdir(originaldir+"/indexed_sprites")
 score = 0
 framerate = 120
 frame = 0
@@ -17,7 +20,7 @@ gameover = False
 totalvel = False
 lose = False
 win = False
-
+font = pg.font.SysFont("Myfontfull-Regular", 48)
 # 1. Set up 
 screeninfo = pg.display.Info()
 screenwidth, screenheight = screeninfo.current_w, screeninfo.current_h
@@ -29,6 +32,7 @@ hole_radius = 20
 playareaoffset = [int(screenwidth/2 - width/2), int(screenheight/2 - height/2)]
 filelist = []
 balllist =[]
+scoremultiplier = 1
 for file in os.listdir():
     if file.endswith(".png"):
         filelist.append(file)
@@ -45,6 +49,17 @@ for i in range(len(filelist)):
     if "ball" in filename:
         img = pg.transform.scale(img, (2*radius, 2*radius))
     filelist[i] = img
+os.chdir(originaldir)
+
+data = {"highscore": 0}
+#json
+
+if "data.json" in os.listdir():
+    with open("data.json", "r") as f:
+        data = json.load(f)
+else:
+     with open("data.json", "w") as f:
+        json.dump("data.json", f, indent=4)   
 
 temp_surface = pg.Surface(screen.get_size(), pg.SRCALPHA)
 background = filelist[16]
@@ -179,32 +194,39 @@ class hole:
         self.clock = 0
         self.offset = offset
     def pocket(self,cueball, eightball,ball):
-        global gameover, lose, time_frame, win, balllist
+        global gameover, lose, time_frame, win, balllist,score
         if ball.distancecheck([self.pos[0]+self.radius, self.pos[1]+self.radius]) < self.radius * self.tolerence:
 
             if ball == eightball:
                 object_balls_left = [b for b in balllist if b not in (cueball, eightball)]
                 if len(object_balls_left) > 0:
-                    print("you lose")
+                    #print("you lose")
                     gameover = True
                     lose = True
                     win = False
                     time_frame = 0
+                    print(score)
                 else:
-                    print("you win")
+                    #print("you win")
                     balllist.remove(ball)
                     gameover = True
                     win = True
                     lose = False
                     time_frame = 0
+                    score += 200
+                    print(score)
             else:
                 # just a normal object ball
                 balllist.remove(ball)
                 if ball != cue_ball:
                     self.pocketed = True
+                    if scoremultiplier > 0:
+                        score = (score+100)*scoremultiplier
+                    else:
+                        score += 100
     def imagefadein (self,drawnimage):
         mainbool = False
-        global screen,playareaoffset
+        global screen,playareaoffset,scoremultiplier
         if self.pocketed:
             
             if self.clock < 255:
@@ -213,7 +235,10 @@ class hole:
             if self.clock >= 255:
                 self.clock = 0
                 self.pocketed = False
+                mainbool = False
             drawnimage.set_alpha(min(self.clock, 255))
+            if mainbool:
+                scoremultiplier += 1
             screen.blit(drawnimage, (self.pos[0]-int(drawnimage.get_width()/2)+25+playareaoffset[0],self.pos[1]-int(drawnimage.get_height()/2)+15+playareaoffset[1]))           
 
 rack_positions = [
@@ -261,8 +286,10 @@ cue_ball = Ball(cue_ball_pos, 0, 0, radius, filelist[0],balllist)
 
 balllist = [ ball1,ball2, ball3, ball4, ball5, ball6, ball7, ball9, ball10, ball11, ball12, ball13, ball14, ball15,ball8, cue_ball]
 
+
+
 def setuop():
-    global balllist  # we will update the global list in-place / make sure it's the current one
+    global balllist,score  # we will update the global list in-place / make sure it's the current one
 
     # defensive deep-ish copy of initial positions (so nested lists aren't aliased)
     available_positions = [pos.copy() for pos in initial_rack_positions]
@@ -317,17 +344,23 @@ def setuop():
         ball8, ball9, ball10, ball11, ball12, ball13, ball14, ball15,
         cue_ball
     ]
+    score = 0
     # no return — we've updated the global balllist
 
 setuop()
 # Main loop
 screen.fill((0,0,0))
 while True:
+    if data["highscore"]<score:
+        data["highscore"] = score
     playareaoffset = [int(screenwidth/2 - width/2), int(screenheight/2 - height/2)]
     normalmouse = pg.mouse.get_pos()
     mouse = (normalmouse[0]-playareaoffset[0],normalmouse[1]-playareaoffset[1])
-
     mouse_buttons = pg.mouse.get_pressed()
+    text_surface = font.render(f"Score:{score}", True, (255, 255, 255))
+    highscore = font.render(f"High Score:{data['highscore']}", True, (255, 255, 255))
+    screen.blit(text_surface, [playareaoffset[0]-(len(f"Score:{score}")*24),playareaoffset[1]])
+    screen.blit(highscore, [playareaoffset[0]-(len(f"High Score:{data['highscore']}")*24),playareaoffset[1]+50])
     if gameover:
         # Fade in the "you lose" image
         if time_frame < 255:
@@ -383,8 +416,8 @@ while True:
                 cue_ball.vel = 0
                 cue_ball.vel = power 
                 mouse_on_cueball = False
-                if power != 0:
-                    print("power:", power)  
+                #if power != 0:
+                    #print("power:", power)  
                 power = 0
                 frame = 0
                 pressed = False
@@ -407,10 +440,7 @@ while True:
             middlel.pocket(cue_ball,ball8,ball) 
             middler.pocket(cue_ball,ball8,ball)  
             
-            if ball.vel > 0:
-                totalvel = True
-            else:
-                totalvel = False
+        totalvel = any(ball.vel > 0.2 for ball in balllist)
 
         # control cue ball   
 
@@ -421,6 +451,7 @@ while True:
 
     # only reset when all balls have stopped AND cueball is missing
         if cueball_pocketed and not totalvel:
+            score -= 50
             screen.blit(background, playareaoffset)
             for i in range(len(balllist)):
                 circle(balllist[i].color, [balllist[i].pos[0]-balllist[i].radius+playareaoffset[0],balllist[i].pos[1]-balllist[i].radius+playareaoffset[1]], balllist[i].radius)
@@ -430,23 +461,20 @@ while True:
             cue_ball.initially_pos = cue_ball_pos.copy()
             cue_ball.vel = 0
             cue_ball.direction = 0
-            print("cue ball added back")
+            #print("cue ball added back")
         
-
-    if balllist == [cue_ball]:
-        screen.blit(background, playareaoffset)
-        screen.blit(filelist[17],playareaoffset)
-        screen.blit(filelist[17],(width/2-150+playareaoffset[0],height/2-150+playareaoffset[1]))
-        pg.time.delay(500)
-        win = True
-        setuop()
-        print("you win")
     for i in range(len(holes)):
         holes[i].imagefadein(filelist[19])
+        if not holes[i].mainbool:
+            scoremultiplier = 0
     # reset
     pg.display.flip()
     for event in pg.event.get():
         if event.type == pg.QUIT:
+            
+            
+            with open("data.json", "w") as f:
+                json.dump(data, f)
             sys.exit()
             running = False
         elif event.type == pg.KEYDOWN:
@@ -456,7 +484,7 @@ while True:
             screen = pg.display.set_mode((event.w, event.h), pg.RESIZABLE)
             screenwidth,screenheight = event.w,event.h
     #print("hello world")
-   
+    
     screen.blit(filelist[20],(0,0))
     screen.blit(background, playareaoffset)
     
